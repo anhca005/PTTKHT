@@ -1,0 +1,32 @@
+# Chạy thử hệ thống 3 tầng: MySQL (CSDL) + Tomcat (máy chủ ứng dụng)
+# B1: build file war:  docker run --rm -v "%cd%":/app -w /app maven:3.9-eclipse-temurin-17 mvn -q package
+# B2: docker compose up -d   ->  mở http://localhost:8089/LibMan9
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./db/libman9.sql:/docker-entrypoint-initdb.d/libman9.sql:ro
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p123456"]
+      interval: 5s
+      retries: 20
+
+  web:
+    image: tomcat:10.1-jdk17
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: "jdbc:mysql://db:3306/libman9?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh"
+      DB_USER: root
+      DB_PASSWORD: "123456"
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - ./target/LibMan9.war:/usr/local/tomcat/webapps/LibMan9.war
+    ports:
+      - "8089:8080"
